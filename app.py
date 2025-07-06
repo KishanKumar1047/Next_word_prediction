@@ -2,8 +2,12 @@ import streamlit as st
 import pickle
 import numpy as np
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences 
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# --- Monkey patch to fix legacy keras path issue ---
+import sys
+import tensorflow.keras.preprocessing.text as tf_text
+sys.modules['keras.preprocessing.text'] = tf_text
 
 # --- Load model and tokenizer ---
 model = load_model('lstm_next_word_model.h5')
@@ -14,14 +18,14 @@ with open('tokenizer.pickle', 'rb') as handle:
 # --- Prediction Function ---
 def predict_next_word(model, tokenizer, text, max_sequence_length):
     token_list = tokenizer.texts_to_sequences([text])[0]
-    
+
     if len(token_list) > max_sequence_length:
         token_list = token_list[-(max_sequence_length - 1):]
 
-    token_list = pad_sequences([token_list], maxlen=max_sequence_length - 1, padding='pre') 
+    token_list = pad_sequences([token_list], maxlen=max_sequence_length - 1, padding='pre')
     predicted = model.predict(token_list, verbose=0)
     predicted_word_index = np.argmax(predicted, axis=1)[0]
-    
+
     for word, index in tokenizer.word_index.items():
         if index == predicted_word_index:
             return word
@@ -33,9 +37,7 @@ st.set_page_config(page_title="Next Word Predictor", page_icon="🧠", layout="c
 # --- Custom CSS for styling ---
 st.markdown("""
     <style>
-    .main {
-        background-color: #f0f2f6;
-    }
+
     .stButton>button {
         background-color: #4CAF50;
         color: white;
