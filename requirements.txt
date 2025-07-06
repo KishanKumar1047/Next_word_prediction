@@ -1,5 +1,5 @@
 flask==2.3.3
-tensorflow==2.13.0
+tensorflow==2.15.0
 numpy==1.23.5
 gunicorn==21.2.0
 h5py==3.10.0
