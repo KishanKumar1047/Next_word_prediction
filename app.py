@@ -1,4 +1,4 @@
-import streamlit as st
+from flask import Flask, request, render_template
 import pickle
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -9,13 +9,16 @@ import sys
 import tensorflow.keras.preprocessing.text as tf_text
 sys.modules['keras.preprocessing.text'] = tf_text
 
+# --- Initialize Flask app ---
+app = Flask(__name__)
+
 # --- Load model and tokenizer ---
 model = load_model('lstm_next_word_model.h5')
 
 with open('tokenizer.pickle', 'rb') as handle:
     tokenizer = pickle.load(handle)
 
-# --- Prediction Function ---
+# --- Prediction function ---
 def predict_next_word(model, tokenizer, text, max_sequence_length):
     token_list = tokenizer.texts_to_sequences([text])[0]
 
@@ -31,44 +34,16 @@ def predict_next_word(model, tokenizer, text, max_sequence_length):
             return word
     return "No match found"
 
-# --- Page Configuration ---
-st.set_page_config(page_title="Next Word Predictor", page_icon="🧠", layout="centered")
+# --- Flask routes ---
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    prediction = None
+    if request.method == 'POST':
+        input_text = request.form['text']
+        if input_text.strip() != "":
+            max_sequence_length = model.input_shape[1] + 1
+            prediction = predict_next_word(model, tokenizer, input_text, max_sequence_length)
+    return render_template('index.html', prediction=prediction)
 
-# --- Custom CSS for styling ---
-st.markdown("""
-    <style>
-
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        font-size: 16px;
-        padding: 10px 24px;
-        border-radius: 8px;
-    }
-    .stTextInput>div>div>input {
-        font-size: 18px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- App Layout ---
-st.title("🧠 Next Word Prediction App")
-st.markdown("#### ✨ Powered by LSTM & Streamlit")
-st.write("Type a phrase or sentence and let the AI guess what comes next!")
-
-with st.container():
-    input_text = st.text_input("🔤 Enter your sentence below", placeholder="e.g. Once upon a", key="input")
-
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("🚀 Predict Next Word"):
-            if input_text.strip() == "":
-                st.warning("Please enter a valid input to predict.")
-            else:
-                max_sequence_length = model.input_shape[1] + 1
-                predicted_word = predict_next_word(model, tokenizer, input_text, max_sequence_length)
-                st.success(f"✨ **Predicted Next Word:** `{predicted_word}`")
-
-# --- Footer ---
-st.markdown("---")
-st.markdown("Made with ❤️ using `TensorFlow` and `Streamlit`")
+if __name__ == '__main__':
+    app.run(debug=True)
